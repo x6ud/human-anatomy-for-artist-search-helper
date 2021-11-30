@@ -46,12 +46,6 @@
                            target="_blank">human-anatomy-for-artist.com</a>.
                     </div>
                     <div>
-                        I recorded the
-                        <a href="https://google.github.io/mediapipe/solutions/pose.html"
-                           target="_blank">AI-identified</a>
-                        poses of some of the photos to allow you to search for them by the 3D model above.
-                    </div>
-                    <div>
                         Currently less than 1% of the photos are included. More data will be added slowly.
                     </div>
                     <div>
@@ -63,8 +57,13 @@
                         </a>
                     </div>
                     <div>
-                        Another <a href="https://x6ud.github.io/pose-search" target="_blank">
-                        tool for searching photos by pose</a>
+                        <a href="https://x6ud.github.io/female-anatomy-for-artist-search-helper" target="_blank">
+                            Female body art reference search
+                        </a>
+                    </div>
+                    <div>
+                        <a href="https://x6ud.github.io/pose-search" target="_blank">
+                            Another page for searching photos by pose</a>
                     </div>
                 </div>
             </div>
