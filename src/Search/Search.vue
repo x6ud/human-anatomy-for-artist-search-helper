@@ -46,7 +46,7 @@
                            target="_blank">human-anatomy-for-artist.com</a>.
                     </div>
                     <div>
-                        Currently less than 1% of the photos are included. More data will be added slowly.
+                        Currently less than 2% of the photos are included. More data will be added slowly.
                     </div>
                     <div>
                         <a href="https://github.com/x6ud/x6ud.github.io/issues" target="_blank">Leave a message</a>
