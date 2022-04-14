@@ -28,6 +28,22 @@
                     </n-button>
                 </div>
 
+                <div class="cols search-condition">
+                    <label>Gender</label>
+                    <div style="text-decoration: underline;">Male</div>
+                    <a href="https://x6ud.github.io/female-anatomy-for-artist-search-helper"
+                       target="_blank"
+                    >
+                        Female
+                    </a>
+                </div>
+
+                <div class="cols search-condition">
+                    <label>Type</label>
+                    <div style="text-decoration: underline;">Anatomy</div>
+                    <a href="https://x6ud.github.io/pose-search" target="_blank">Daily</a>
+                </div>
+
                 <div class="description">
                     <div>Wheel: Rotate Camera / Zoom</div>
                     <div>Mouse Right: Move Camera</div>
@@ -46,7 +62,7 @@
                            target="_blank">human-anatomy-for-artist.com</a>.
                     </div>
                     <div>
-                        Currently less than 2% of the photos are included. More data will be added slowly.
+                        Currently less than 1% of the photos are included. More data will be added slowly.
                     </div>
                     <div>
                         <a href="https://github.com/x6ud/x6ud.github.io/issues" target="_blank">Leave a message</a>
@@ -55,15 +71,6 @@
                         <a href="https://github.com/x6ud/human-anatomy-for-artist-search-helper" target="_blank">
                             Source code
                         </a>
-                    </div>
-                    <div>
-                        <a href="https://x6ud.github.io/female-anatomy-for-artist-search-helper" target="_blank">
-                            Female body art reference search
-                        </a>
-                    </div>
-                    <div>
-                        <a href="https://x6ud.github.io/pose-search" target="_blank">
-                            Another page for searching photos by pose</a>
                     </div>
                 </div>
             </div>
@@ -145,6 +152,18 @@
     & > .fill {
         flex: 1 1;
         min-width: 0;
+    }
+}
+
+.search-condition {
+    font-size: 12px;
+    color: #989898;
+    line-height: 1.5em;
+
+    label {
+        width: 3.5em;
+        margin-right: .5em;
+        text-align: right;
     }
 }
 
