@@ -1,6 +1,6 @@
-import {NButton, NCheckbox, NInput, NProgress, NSpin} from 'naive-ui';
-import {defineComponent, nextTick, onMounted, ref} from 'vue';
-import {BasePhotoInfo, getPhotoListPage} from '../utils/human-anatomy-for-artist-crawler';
+import {NButton, NInput, NProgress, NSpin} from 'naive-ui';
+import {computed, defineComponent, onBeforeUnmount, onMounted, ref} from 'vue';
+import {getPhotoListPage} from '../utils/human-anatomy-for-artist-crawler';
 import PhotoDataset from '../utils/PhotoDataset';
 import PhotoPoseLandmarks from '../utils/PhotoPoseLandmarks';
 
@@ -9,7 +9,6 @@ export default defineComponent({
         NButton,
         NInput,
         NSpin,
-        NCheckbox,
         NProgress,
     },
     setup() {
@@ -17,125 +16,151 @@ export default defineComponent({
         const datasetLoading = ref(false);
         const datasetLength = ref(0);
 
-        const photoListLoading = ref(false);
-        const photoListPage = ref('1');
-        const photoListNumOfPages = ref(0);
-        const photoList = ref<BasePhotoInfo[]>([]);
+        const totalPages = ref(0);
+        const pageStart = ref('1');
+        const pageEnd = ref('1');
 
+        let photosPerPage = 60;
         const processing = ref(false);
-        const processingPercentage = ref(0);
+        const stop = ref(false);
+        const total = ref(0);
+        const progress = ref(0);
+        const percent = computed(function () {
+            return Math.round(progress.value / total.value * 100);
+        });
+        const progressText = computed(function () {
+            return `${progress.value} / ${total.value}`;
+        });
+        const remainingSecs = ref(0);
+        const remaining = computed(function () {
+            function padZero(val: number) {
+                return val < 10 ? '0' + val : val + '';
+            }
+
+            let dt = Math.round(remainingSecs.value);
+            const secs = dt % 60;
+            dt = Math.floor(dt / 60);
+            const mins = dt % 60;
+            dt = Math.floor(dt / 60);
+            const hours = dt;
+            return `${padZero(hours)}:${padZero(mins)}:${padZero(secs)}`;
+        });
+
         const detectResult = ref<PhotoPoseLandmarks[]>([]);
 
         onMounted(async function () {
             try {
                 datasetLoading.value = true;
                 await dataset.load();
+                await dataset.loadAllChunks();
                 datasetLength.value = dataset.size;
+
+                const page = await getPhotoListPage(1);
+                totalPages.value = page.numOfPages;
+                pageEnd.value = page.numOfPages + '';
+                photosPerPage = page.photos.length || photosPerPage;
             } finally {
                 datasetLoading.value = false;
             }
         });
 
-        async function loadPhotoListPage() {
-            try {
-                photoListLoading.value = true;
-                photoList.value = [];
-                await nextTick();
+        let tid: any = 0;
 
-                const page = await getPhotoListPage(photoListPage.value);
-                photoListNumOfPages.value = page.numOfPages;
-                photoList.value = page.photos;
-            } finally {
-                photoListLoading.value = false;
+        function startCountdown() {
+            if (!tid) {
+                tid = setInterval(function () {
+                    remainingSecs.value = Math.max(0, remainingSecs.value - 1);
+                }, 1000);
             }
         }
 
-        async function photoListPrevPage() {
-            const num = Math.max(1, Number(photoListPage.value) - 1);
-            if (Number(photoListPage.value) === num) {
-                return;
+        function stopCountdown() {
+            if (tid) {
+                clearInterval(tid);
+                tid = 0;
             }
-            photoListPage.value = num + '';
-            await loadPhotoListPage();
         }
 
-        async function photoListNextPage() {
-            const num = Math.min(photoListNumOfPages.value, Number(photoListPage.value) + 1);
-            if (Number(photoListPage.value) === num) {
-                return;
-            }
-            photoListPage.value = num + '';
-            await loadPhotoListPage();
-        }
+        onBeforeUnmount(function () {
+            stopCountdown();
+        });
 
-        async function processSelected() {
+        async function process() {
             try {
                 processing.value = true;
-                processingPercentage.value = 0;
-                detectResult.value = [];
-                await nextTick();
-
-                const start = Date.now();
-
-                const selected = photoList.value.filter(item => item.selected);
-                for (let i = 0, len = selected.length; i < len; ++i) {
-                    try {
-                        const id = selected[i].id;
-                        const result = new PhotoPoseLandmarks();
-                        await result.load(id);
-                        detectResult.value.push(result);
-                        processingPercentage.value = Math.floor((i + 1) / len * 100);
-                        await nextTick();
-                    } catch (e) {
-                        console.error(e);
+                total.value = 0;
+                progress.value = 0;
+                remainingSecs.value = 0;
+                stop.value = false;
+                const start = Number(pageStart.value);
+                const end = Number(pageEnd.value);
+                total.value = photosPerPage * (end - start + 1);
+                remainingSecs.value = 15 * total.value;
+                startCountdown();
+                let avgTime = 15000;
+                for (let pageNum = end; pageNum >= start; --pageNum) {
+                    if (stop.value) {
+                        break;
+                    }
+                    const page = await getPhotoListPage(pageNum);
+                    if (page.photos.length < photosPerPage) {
+                        total.value -= (photosPerPage - page.photos.length);
+                    }
+                    for (let photo of page.photos) {
+                        if (await dataset.has(photo.id)) {
+                            // skip
+                        } else {
+                            console.log(`Processing #${photo.id} in page ${pageNum}`);
+                            const startTime = Date.now();
+                            const result = new PhotoPoseLandmarks();
+                            await result.loadByWorker(photo.id);
+                            detectResult.value.push(result);
+                            if (result.normalized?.length) {
+                                await dataset.add(result);
+                                await dataset.writeToFile();
+                                datasetLength.value += 1;
+                                let dt = Date.now() - startTime;
+                                if (progress.value > 1) {
+                                    avgTime = (avgTime * progress.value + dt) / (progress.value + 1);
+                                }
+                            }
+                        }
+                        progress.value += 1;
+                        if (stop.value || total.value === progress.value) {
+                            break;
+                        }
+                        remainingSecs.value = Math.round(avgTime / 1000 * (total.value - progress.value));
                     }
                 }
-
-                const time = Date.now() - start;
-                console.info(`Total time: ${time / 1000}s, Avg: ${time / 1000 / selected.length}s`);
-            } finally {
-                processing.value = false;
+            } catch (e) {
+                console.error(e);
+                alert('An error occurred: ' + e);
             }
-        }
-
-        async function addSelectedResultToDataset() {
-            for (let result of detectResult.value) {
-                if (result.selected) {
-                    await dataset.add(result);
-                }
-            }
-            datasetLength.value = dataset.size;
-        }
-
-        async function saveDatasetToFile() {
-            try {
-                datasetLoading.value = true;
-                await dataset.writeToFile();
-            } finally {
-                datasetLoading.value = false;
-            }
+            stopCountdown();
+            processing.value = false;
         }
 
         return {
+            dataset,
             datasetLoading,
             datasetLength,
 
-            photoListLoading,
-            photoListNumOfPages,
-            photoListPage,
-            photoList,
+            totalPages,
+            pageStart,
+            pageEnd,
 
             processing,
-            processingPercentage,
+            stop,
+            total,
+            progress,
+            percent,
+            progressText,
+            remainingSecs,
+            remaining,
+
             detectResult,
 
-            loadPhotoListPage,
-            photoListPrevPage,
-            photoListNextPage,
-            processSelected,
-
-            addSelectedResultToDataset,
-            saveDatasetToFile,
+            process,
         };
     }
 });

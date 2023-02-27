@@ -1,108 +1,72 @@
 <template>
     <div class="container rows">
-        <div class="cols fill">
-            <div class="rows fill">
-                <div class="cols" style="font-size: 12px; align-items: center;">
-                    <div class="fill"></div>
-                    <n-input style="width: 60px;"
-                             size="tiny"
-                             placeholder="Page"
-                             v-model:value="photoListPage"
-                             @keypress.enter="loadPhotoListPage"
-                    />
-                    <span>/ {{ photoListNumOfPages }}</span>
-                    <n-button size="tiny"
-                              @click="photoListPrevPage"
-                    >
-                        Prev
-                    </n-button>
-                    <n-button size="tiny"
-                              @click="photoListNextPage"
-                    >
-                        Next
-                    </n-button>
-                    <n-button type="primary"
-                              size="tiny"
-                              @click="processSelected"
-                    >
-                        Process
-                    </n-button>
-                </div>
-
-                <div class="scroll-list fill">
-                    <n-spin :show="photoListLoading">
-                        <div v-for="photo in photoList"
-                             class="item photo"
-                             :data-id="photo.id"
-                        >
-                            <img :src="photo.thumb"
-                                 :alt="photo.title"
-                                 referrerpolicy="no-referrer"
-                            >
-                            <n-checkbox class="anchor"
-                                        style="top: 4px; left: 4px;"
-                                        size="small"
-                                        v-model:checked="photo.selected"
-                            />
-                        </div>
-                    </n-spin>
-                </div>
+        <div class="rows fill">
+            <div class="cols" style="font-size: 12px; align-items: center;">
+                <span>Num of Records: {{ datasetLength }}</span>
+                <div class="fill"></div>
+                <span>Total {{ totalPages }} / Page&nbsp;</span>
+                <n-input style="width: 60px;"
+                         size="tiny"
+                         placeholder="Page Start"
+                         v-model:value="pageStart"
+                />
+                <span>~</span>
+                <n-input style="width: 60px;"
+                         size="tiny"
+                         placeholder="Page End"
+                         v-model:value="pageEnd"
+                />
+                <n-button type="primary"
+                          size="tiny"
+                          @click="process"
+                >
+                    Crawl
+                </n-button>
             </div>
 
-            <div class="rows fill">
-                <div class="cols">
-                    <div class="fill"></div>
-                    <n-button size="tiny"
-                              type="primary"
-                              @click="addSelectedResultToDataset"
+            <div class="scroll-list fill">
+                <div v-for="photo in detectResult"
+                     class="item photo"
+                     :data-id="photo.id"
+                >
+                    <img :src="photo.landmarksImage || photo.url"
+                         alt=""
+                         referrerpolicy="no-referrer"
                     >
-                        Add Records
-                    </n-button>
-                </div>
-                <div class="scroll-list fill">
-                    <n-progress v-if="processing"
-                                style="position: absolute; z-index: 2; left: 50%; top: 50%; width: 250px; margin-left: -125px; margin-top: -8px;"
-                                type="line"
-                                :percentage="processingPercentage"
-                                indicator-placement="inside"
-                                processing
-                    />
-
-                    <div v-for="photo in detectResult"
-                         class="item photo"
-                         :data-id="photo.id"
-                    >
-                        <img :src="photo.landmarksImage || photo.url"
-                             alt=""
-                             referrerpolicy="no-referrer"
-                        >
-                        <n-checkbox class="anchor"
-                                    style="top: 4px; left: 4px;"
-                                    size="small"
-                                    v-model:checked="photo.selected"
-                        />
-                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="cols" style="font-size: 12px; align-items: center;">
-            <div class="fill"></div>
-            <span>Num of Records: {{ datasetLength }}</span>
-            <span>&nbsp;</span>
-            <n-button size="tiny"
-                      type="primary"
-                      @click="saveDatasetToFile"
+    <div class="progress"
+         v-if="processing"
+    >
+        <div class="cols"
+             style="margin-bottom: 8px; align-items: center;"
+        >
+            <n-progress class="fill"
+                        type="line"
+                        :percentage="percent"
+                        indicator-placement="inside"
+                        processing
+            />
+            <div style="margin-right: 4px;">{{ progressText }}</div>
+            <n-button @click="stop = true"
+                      :disabled="stop"
+                      size="tiny"
             >
-                Save JSON
+                {{ stop ? 'Stopping' : 'Stop' }}
             </n-button>
+        </div>
+        <div style="font-size: 12px;">
+            Remaining: {{ remaining }}
         </div>
     </div>
 </template>
 
 <script src="./Editor.ts"></script>
 
-<style lang="scss">
+<style lang="scss" scoped>
 .container {
     width: 100%;
     height: 100%;
@@ -137,18 +101,25 @@
     }
 }
 
+.progress {
+    position: fixed;
+    z-index: 100;
+    left: 50%;
+    top: 30%;
+    width: 480px;
+    margin: 0 0 0 -240px;
+    border: solid 1px #EFEFF5;
+    padding: 10px;
+    background: #fff;
+    border-radius: 4px;
+}
+
 .scroll-list {
     position: relative;
     border: solid 1px #d9d9d9;
     border-radius: 2px;
     overflow: auto;
     padding: 4px;
-
-    .n-spin-container,
-    .n-spin-content {
-        width: 100%;
-        height: 100%;
-    }
 
     .item {
         float: left;
@@ -169,11 +140,6 @@
     img {
         max-width: 100%;
         max-height: 100%;
-    }
-
-    .anchor {
-        position: absolute;
-        z-index: 2;
     }
 }
 </style>
