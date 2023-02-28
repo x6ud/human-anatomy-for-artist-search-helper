@@ -73,7 +73,7 @@
                  ref="searchResultsContainerDom"
             >
                 <div class="loading" v-if="loadingData && !searchResults?.length">
-                    Loading data...
+                    Loading data... ({{ loadingProgress }}/{{ loadingTotal }})
                 </div>
                 <div class="warning"
                      v-if="!searchResults?.length && (!supportWebGL2 || !supportMouse)"
